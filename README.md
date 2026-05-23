@@ -79,6 +79,7 @@ and over 70 cloud, registrar, and self-hosted DNS provider APIs. It was designed
 | [Volcano Engine](https://www.volcengine.com/) | `new_volcengine` | HMAC-SHA256 |
 | [Vultr](https://www.vultr.com/) | `new_vultr` | |
 | [Websupport](https://www.websupport.sk/) | `new_websupport` | HMAC-SHA1 |
+| [Wedos](https://kb.wedos.global/wapi-wdns/) | `new_wedos` | TODO |
 | [Yandex Cloud DNS](https://cloud.yandex.com/services/dns) | `new_yandexcloud` | PS256 JWT |
 
 ## API

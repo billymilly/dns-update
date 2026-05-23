@@ -18,9 +18,10 @@ use providers::ovh::OvhProvider;
 use providers::volcengine::VolcengineProvider;
 #[cfg(any(feature = "ring", feature = "aws-lc-rs"))]
 use providers::yandexcloud::YandexCloudProvider;
-
 #[cfg(any(feature = "ring", feature = "aws-lc-rs"))]
 use providers::transip::TransipProvider;
+#[cfg(any(feature = "ring", feature = "aws-lc-rs"))]
+use providers::wedos::WedosProvider;
 
 #[cfg(feature = "test_provider")]
 use providers::{in_memory::InMemoryProvider, pebble::PebbleProvider};
@@ -294,6 +295,8 @@ pub enum DnsUpdater {
     Inwx(InwxProvider),
     UltraDns(UltraDnsProvider),
     Infoblox(InfobloxProvider),
+    #[cfg(any(feature = "ring", feature = "aws-lc-rs"))]
+    Wedos(WedosProvider),
 }
 
 pub trait IntoFqdn<'x> {

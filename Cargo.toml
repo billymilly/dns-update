@@ -51,6 +51,7 @@ aws-lc-rs = { version = "1.16", optional = true }
 rustls = { version = "0.23", default-features = false, optional = true }
 quick-xml = { version = "0.39.4", features = ["serialize"] }
 chrono = { version = "0.4" , default-features = false, features = ["std", "clock", "now"] }
+chrono-tz = "0.10"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }

@@ -87,6 +87,10 @@ pub mod volcengine;
 pub mod vultr;
 pub mod websupport;
 #[cfg(any(feature = "ring", feature = "aws-lc-rs"))]
+pub mod wedos;
+#[cfg(any(feature = "ring", feature = "aws-lc-rs"))]
+pub mod volcengine;
+#[cfg(any(feature = "ring", feature = "aws-lc-rs"))]
 pub mod yandexcloud;
 
 impl DnsRecord {
