@@ -20,8 +20,8 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 #[repr(u16)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-enum WedosReplyCodes {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum WedosReplyCode {
     Ok = 1000,
 
     UnsupportedTld = 2201,
@@ -42,17 +42,49 @@ enum WedosReplyCodes {
     DomainDeleted = 3306,
 }
 
-impl Display for WedosReplyCodes {
+impl Display for WedosReplyCode {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{:?}", self)
     }
 }
 
+impl<'de> Deserialize<'de> for WedosReplyCode {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        match u16::deserialize(d)? {
+            1000 => Ok(Self::Ok),
+            2201 => Ok(Self::UnsupportedTld),
+            2202 => Ok(Self::InvalidOrUnsupportedDomainName),
+            2309 => Ok(Self::InvalidRecordType),
+            2310 => Ok(Self::UnableToAddAnotherRecordToTheDomain),
+            2311 => Ok(Self::InvalidName),
+            2312 => Ok(Self::InvalidNameForRecordType),
+            2313 => Ok(Self::InvalidCnameForName),
+            2314 => Ok(Self::InvalidDataForRecord),
+            2316 => Ok(Self::RecordAlreadyExists),
+            2317 => Ok(Self::InvalidTtl),
+            2318 => Ok(Self::SecondaryDomainTypeNotAllowed),
+            3222 => Ok(Self::OpeningDomainFailed),
+            3223 => Ok(Self::AccessDenied),
+            3305 => Ok(Self::DomainLockedForEditing),
+            3306 => Ok(Self::DomainDeleted),
+            n => Err(serde::de::Error::custom(format!("unknown reply code: {n}"))),
+        }
+    }
+}
+
+impl Serialize for WedosReplyCode {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_u16(*self as u16)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 #[serde(transparent)]
 struct RowId(String);
 
 #[derive(Debug, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 #[serde(tag = "command", content = "data", rename_all = "kebab-case")]
 enum WedosCommandReply {
     DnsRowsList(HashMap<RowId, DnsRow>),
@@ -63,8 +95,9 @@ enum WedosCommandReply {
 }
 
 #[derive(Debug, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 struct DnsRow {
-    #[serde(rename = "id")]
+    #[serde(rename = "ID")]
     id: String,
     name: String,
     ttl: String,
@@ -74,6 +107,7 @@ struct DnsRow {
 }
 
 #[derive(Debug, Serialize)]
+#[cfg_attr(test, derive(Deserialize))]
 #[serde(tag = "command", content = "data", rename_all = "kebab-case")]
 enum WedosCommandRequest {
     DnsRowsList,
@@ -86,12 +120,14 @@ enum WedosCommandRequest {
 }
 
 #[derive(Debug, Serialize)]
+#[cfg_attr(test, derive(Deserialize))]
 struct DnsRowDetailData {
     name: String,
     row_id: String,
 }
 
 #[derive(Debug, Serialize)]
+#[cfg_attr(test, derive(Deserialize))]
 struct DnsRowAddData {
     domain: String,
     name: String,
@@ -102,6 +138,7 @@ struct DnsRowAddData {
 }
 
 #[derive(Debug, Serialize)]
+#[cfg_attr(test, derive(Deserialize))]
 struct DnsRowUpdateData {
     domain: String,
     row_id: String,
@@ -110,24 +147,28 @@ struct DnsRowUpdateData {
 }
 
 #[derive(Debug, Serialize)]
+#[cfg_attr(test, derive(Deserialize))]
 struct DnsRowDeleteData {
     domain: String,
     row_id: String,
 }
 
 #[derive(Debug, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 struct WedosApiResponse {
     response: WedosResponseBody,
 }
 
 #[derive(Debug, Serialize)]
+#[cfg_attr(test, derive(Deserialize))]
 struct WedosApiRequest {
     request: WedosRequestBody,
 }
 
 #[derive(Debug, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 struct WedosResponseBody {
-    code: WedosReplyCodes,
+    code: WedosReplyCode,
     result: String,
     timestamp: String,
     #[serde(rename = "svTRID")]
@@ -137,6 +178,7 @@ struct WedosResponseBody {
 }
 
 #[derive(Debug, Serialize)]
+#[cfg_attr(test, derive(Deserialize))]
 struct WedosRequestBody {
     user: String,
     auth: String,
@@ -250,5 +292,70 @@ impl WedosProvider {
         let digest = hex::encode(crypto::sha1_digest(raw.as_bytes()));
         *guard = Some((digest.clone(), current_prague_hour));
         Ok(digest)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_dns_row_deserialize() {
+        let json = r#"
+        {
+            "response": {
+                "code": 1000,
+                "result": "OK",
+                "timestamp": "UTF timestamp",
+                "clTRID": "your ID",
+                "svTRID": "server ID",
+                "command": "dns-row-detail",
+                "data": {
+                    "row1": {
+                        "ID": "record ID",
+                        "name": "record name (may be empty)",
+                        "ttl": "TTL",
+                        "rdtype": "record type",
+                        "rdata": "record data",
+                        "changed_date": "date and time of last update",
+                        "author_comment": "comment"
+                    }
+                }
+            }
+        }
+        "#;
+        let response: WedosApiResponse =
+            serde_json::from_str(json).unwrap_or_else(|e| panic!("deserialization failed: {e:?}"));
+        assert_eq!(response.response.code, WedosReplyCode::Ok);
+        match response.response.command {
+            WedosCommandReply::DnsRowDetail(rows) => {
+                let row = rows.get(&RowId("row1".into())).unwrap();
+                assert_eq!(row.rdata, "record data");
+                assert_eq!(row.rdtype, "record type");
+            }
+            other => panic!("expected DnsRowsList, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_dns_row_add_request_serializes() {
+        let request = WedosApiRequest {
+            request: WedosRequestBody {
+                user: "your@login.tld".into(),
+                auth: "authentication string".into(),
+                command: WedosCommandRequest::DnsRowAdd(DnsRowAddData {
+                    domain: "domain name".into(),
+                    name: "record name (may be empty)".into(),
+                    ttl: "TTL".into(),
+                    record_type: "record type".into(),
+                    rdata: "record data".into(),
+                }),
+            },
+        };
+        let json: serde_json::Value = serde_json::to_value(&request).unwrap();
+        assert_eq!(json["request"]["user"], "your@login.tld");
+        assert_eq!(json["request"]["command"], "dns-row-add");
+        assert_eq!(json["request"]["data"]["type"], "record type");
+        assert_eq!(json["request"]["data"]["rdata"], "record data");
     }
 }
