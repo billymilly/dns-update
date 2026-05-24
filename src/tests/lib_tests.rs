@@ -9,7 +9,7 @@
  * except according to those terms.
  */
 
-use crate::utils::{strip_origin_from_name, txt_chunks_to_text};
+use crate::utils::{is_email, strip_origin_from_name, txt_chunks_to_text};
 
 #[test]
 fn test_txt_chunks_to_text_short() {
@@ -108,6 +108,16 @@ fn test_strip_origin_from_name() {
         strip_origin_from_name("example.com", "example.com", Some("")),
         ""
     );
+}
+
+#[test]
+fn test_is_email() {
+    assert!(!is_email(""));
+    assert!(!is_email("example.com"));
+    assert!(!is_email("example@.com"));
+    assert!(!is_email("example@.example.com"));
+    assert!(is_email("example@example.com"));
+    assert!(is_email("example@example.sample.com"));
 }
 
 #[cfg(feature = "aws-lc-rs")]

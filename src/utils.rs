@@ -86,6 +86,25 @@ pub(crate) fn strip_origin_from_name(
     }
 }
 
+pub(crate) fn is_email(trimmed_input: &str) -> bool {
+    if trimmed_input.contains(' ') {
+        return false;
+    }
+    let parts: Vec<&str> = trimmed_input.split('@').collect();
+    if parts.len() != 2 {
+        return false;
+    }
+    let (local, domain) = (parts[0], parts[1]);
+    if local.is_empty() || domain.is_empty() {
+        return false;
+    }
+    let domain_parts: Vec<&str> = domain.split('.').collect();
+    if domain_parts.len() < 2 || domain_parts[0].is_empty() {
+        return false;
+    }
+    true
+}
+
 impl fmt::Display for TLSARecord {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         write!(
