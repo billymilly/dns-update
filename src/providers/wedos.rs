@@ -10,7 +10,9 @@
  */
 
 use crate::utils::is_email;
-use crate::{DnsRecord, DnsRecordType, Error, IntoFqdn, crypto, http::HttpClientBuilder};
+use crate::{
+    DnsRecord, DnsRecordType, Error, IntoFqdn, crypto, http::HttpClient, http::HttpClientBuilder,
+};
 use chrono::{Timelike, Utc};
 use chrono_tz::Europe::Prague;
 use serde::{Deserialize, Serialize};
@@ -196,7 +198,7 @@ pub struct WedosConfig {
 
 #[derive(Clone)]
 pub struct WedosProvider {
-    client: HttpClientBuilder,
+    client: HttpClient,
     endpoint: String,
     max_retries: u32,
     username: String,
@@ -213,11 +215,10 @@ impl WedosProvider {
         if config.wapi_password.is_empty() {
             return Err(Error::Api("Wedos API requires a WAPI password".into()));
         }
-        // ?
-        // https://github.com/stalwartlabs/dns-update/issues/61
         let client = HttpClientBuilder::default()
             .with_header("Accept", "application/json")
-            .with_timeout(config.timeout);
+            .with_timeout(config.timeout)
+            .build();
 
         Ok(Self {
             client,
@@ -235,31 +236,34 @@ impl WedosProvider {
     }
 
     /// Per: https://kb.wedos.global/wapi-wdns/#dns-row-add
-    pub(crate) async fn create(
+    pub(crate) async fn set_rrset(
         &self,
         name: impl IntoFqdn<'_>,
-        record: DnsRecord,
-        ttl: u32,
-        origin: impl IntoFqdn<'_>,
-    ) -> crate::Result<()> {
-        todo!()
-    }
-
-    pub(crate) async fn update(
-        &self,
-        name: impl IntoFqdn<'_>,
-        record: DnsRecord,
-        ttl: u32,
-        origin: impl IntoFqdn<'_>,
-    ) -> crate::Result<()> {
-        todo!()
-    }
-
-    pub(crate) async fn delete(
-        &self,
-        name: impl IntoFqdn<'_>,
-        origin: impl IntoFqdn<'_>,
         record_type: DnsRecordType,
+        ttl: u32,
+        records: Vec<DnsRecord>,
+        origin: impl IntoFqdn<'_>,
+    ) -> crate::Result<()> {
+        todo!()
+    }
+
+    pub(crate) async fn add_to_rrset(
+        &self,
+        name: impl IntoFqdn<'_>,
+        record_type: DnsRecordType,
+        ttl: u32,
+        records: Vec<DnsRecord>,
+        origin: impl IntoFqdn<'_>,
+    ) -> crate::Result<()> {
+        todo!()
+    }
+
+    pub(crate) async fn remove_from_rrset(
+        &self,
+        name: impl IntoFqdn<'_>,
+        record_type: DnsRecordType,
+        records: Vec<DnsRecord>,
+        origin: impl IntoFqdn<'_>,
     ) -> crate::Result<()> {
         todo!()
     }
